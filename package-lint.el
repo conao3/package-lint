@@ -272,7 +272,7 @@ Instead it should use `user-emacs-directory' or `locate-user-emacs-file'."
   (when (package-lint--goto-header "Keywords")
     (let ((line-no (line-number-at-pos))
           (keywords (lm-keywords-list)))
-      (unless (cl-some (lambda (keyword) (assoc (intern keyword) finder-known-keywords)) keywords)
+      (unless (cl-find-if (lambda (keyword) (assoc (intern keyword) finder-known-keywords)) keywords)
         (package-lint--error
          line-no 1 'warning
          (format "You should include standard keywords: see the variable `finder-known-keywords'."))))))
@@ -446,17 +446,11 @@ type of the symbol, either FUNCTION or FEATURE."
               (when (funcall pred (intern sym))
                 (unless (and (eq type 'function) (package-lint--seen-fboundp-check-for sym))
                   (let ((available-backport
-                         (cond
-                          ((eq type 'feature)
-                           (cl-some (lambda (bp)
-                                      (when (string= (car bp) sym)
-                                        (car bp)))
-                                    package-lint-backport-libraries))
-                          ((eq type 'function)
-                           (cl-some (lambda (bp)
-                                      (when (string-match-p (cdr bp) sym)
-                                        (car bp)))
-                                    package-lint-backport-libraries)))))
+                         (car (cond
+                               ((eq type 'feature)
+                                (cl-find-if (lambda (bp) (string= (car bp) sym)) package-lint-backport-libraries))
+                               ((eq type 'function)
+                                (cl-find-if (lambda (bp) (string-match-p (cdr bp) sym)) package-lint-backport-libraries))))))
                     (unless (and available-backport (assoc available-backport valid-deps))
                       (save-excursion
                         (goto-char (match-beginning 1))
